@@ -28,13 +28,21 @@
 
 ### M0 · 只读 loop + trace
 
-**做什么**
+**做什么** —— 代码骨架已写好，见 [code/](code/README.md)
+
 - 一个 `get_order` 只读工具，3 步上限的 tool-use loop
 - 从第一行代码就有 **trace**：每步的输入、工具入出参、耗时、token、终止原因
+- 手写循环而非 SDK 的 `tool_runner`（理由见 [code/README.md](code/README.md)）
 
-**制造问题**
-- 先**不写 trace** 跑几个 case，故意让一个失败，体验「只能靠猜」
-- 然后补上 trace，对比定位速度
+**制造问题** —— 三步演练，别跳过
+
+```bash
+python run.py 4 --no-trace   # 只看输出，试着回答「为什么失败」，计时
+python run.py 4              # 看 trace，同一个问题，这次多久
+```
+
+case 4 查的是别人的订单。关掉 trace 时你只会看到「没查到」，
+分不清是订单不存在、模型没调工具、参数错了、还是权限被拒。
 
 **产出 L2**：[Q19](../题库/C-Agent边界与工具可靠性.md#q19) [Q21](../题库/C-Agent边界与工具可靠性.md#q21) [Q50](../题库/F-评测可观测与排错.md#q50)
 

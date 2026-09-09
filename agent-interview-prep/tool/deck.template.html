@@ -1,0 +1,647 @@
+<title>Agent 面试演练台</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --ground:#EFF3F1; --surface:#FFFFFF; --raised:#F7FAF9;
+  --ink:#0E1614; --body:#26332F; --muted:#5E6F6A; --faint:#8C9C97;
+  --line:#DCE4E1; --line-strong:#C3CFCB;
+  --accent:#0E6A63; --accent-soft:#DCEBE8; --accent-ink:#0A4F4A;
+  --ok:#14795E; --ok-soft:#DDEEE7;
+  --warn:#A96A0C; --warn-soft:#F5E9D5;
+  --flag:#9E2E1E; --flag-soft:#F5E1DD;
+  --shadow:0 1px 2px rgba(14,22,20,.06),0 8px 24px -12px rgba(14,22,20,.18);
+  --r:10px;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:"Noto Sans SC",system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#0C1211; --surface:#141C1A; --raised:#1B2523;
+  --ink:#E6EDEA; --body:#C7D3CF; --muted:#8B9C97; --faint:#63736E;
+  --line:#25312E; --line-strong:#33423E;
+  --accent:#45BDAC; --accent-soft:#16302D; --accent-ink:#7FD6C8;
+  --ok:#3FB08B; --ok-soft:#122B24;
+  --warn:#D8A047; --warn-soft:#2E2515;
+  --flag:#D9705C; --flag-soft:#2F1A16;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -12px rgba(0,0,0,.6);
+}}
+:root[data-theme="dark"]{
+  --ground:#0C1211; --surface:#141C1A; --raised:#1B2523;
+  --ink:#E6EDEA; --body:#C7D3CF; --muted:#8B9C97; --faint:#63736E;
+  --line:#25312E; --line-strong:#33423E;
+  --accent:#45BDAC; --accent-soft:#16302D; --accent-ink:#7FD6C8;
+  --ok:#3FB08B; --ok-soft:#122B24;
+  --warn:#D8A047; --warn-soft:#2E2515;
+  --flag:#D9705C; --flag-soft:#2F1A16;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -12px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--body);font-family:var(--sans);
+  font-size:15px;line-height:1.75;-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ---------- 外壳 ---------- */
+.wrap{max-width:860px;margin:0 auto;padding:0 16px 132px}
+header{padding:18px 0 12px}
+.brandline{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+h1{margin:0;font-size:19px;font-weight:700;color:var(--ink);letter-spacing:-.01em}
+.sub{font-family:var(--mono);font-size:11px;color:var(--faint);letter-spacing:.04em}
+
+/* ---------- 仪表：60 格状态条 ---------- */
+.gauge{margin:16px 0 6px}
+.gaugebar{display:grid;grid-template-columns:repeat(60,1fr);gap:2px;height:18px}
+.tick{border-radius:2px;background:var(--line);border:none;padding:0;min-width:0;
+  transition:transform .12s}
+.tick[data-s="L0"]{background:var(--warn);opacity:.45}
+.tick[data-s="L1"]{background:var(--warn);opacity:.75}
+.tick[data-s="L2弱"]{background:var(--accent);opacity:.5}
+.tick[data-s="L2"]{background:var(--accent);opacity:.8}
+.tick[data-s="已掌握"]{background:var(--ok)}
+.tick[data-s="需重做"]{background:var(--flag)}
+.tick.cur{outline:2px solid var(--accent);outline-offset:2px;z-index:1}
+.gaugekey{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:10.5px;
+  color:var(--faint);margin-top:7px;letter-spacing:.03em}
+.gaugekey b{color:var(--ink);font-weight:500}
+
+/* ---------- 模式与筛选 ---------- */
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:14px 0 10px}
+.seg{display:flex;background:var(--raised);border:1px solid var(--line);border-radius:8px;
+  padding:2px;gap:2px}
+.seg button{font-family:var(--mono);font-size:12px;padding:6px 13px;border-radius:6px;
+  color:var(--muted);white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);font-weight:500;
+  box-shadow:0 1px 2px rgba(0,0,0,.08)}
+select{font-family:var(--mono);font-size:12px;padding:7px 9px;border-radius:8px;
+  border:1px solid var(--line);background:var(--raised);color:var(--body)}
+.spacer{flex:1}
+
+/* ---------- 卡片 ---------- */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  box-shadow:var(--shadow);overflow:hidden}
+.qhead{padding:16px 18px 14px;border-bottom:1px solid var(--line)}
+.qmeta{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-size:11px;
+  color:var(--faint);letter-spacing:.05em;margin-bottom:9px;flex-wrap:wrap}
+.qid{color:var(--accent);font-weight:700;font-size:13px;letter-spacing:.02em}
+.chip{border:1px solid var(--line-strong);border-radius:999px;padding:1px 8px;font-size:10px}
+.chip.star{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.qtitle{font-size:20px;line-height:1.5;font-weight:700;color:var(--ink);margin:0;
+  text-wrap:balance;letter-spacing:-.01em}
+
+/* ---------- 计时器 ---------- */
+.timer{display:flex;align-items:center;gap:12px;padding:11px 18px;background:var(--raised);
+  border-bottom:1px solid var(--line);flex-wrap:wrap}
+.clock{font-family:var(--mono);font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;
+  color:var(--ink);letter-spacing:-.02em;min-width:74px}
+.clock.over{color:var(--warn)} .clock.bad{color:var(--flag)}
+.timerhint{font-family:var(--mono);font-size:11px;color:var(--faint);line-height:1.55;flex:1;min-width:150px}
+.btn{font-family:var(--mono);font-size:12px;padding:7px 14px;border-radius:7px;
+  border:1px solid var(--line-strong);background:var(--surface);color:var(--body)}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.solid{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500}
+.btn.solid:hover{opacity:.9;color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* ---------- 分层内容 ---------- */
+.layers{padding:4px 0}
+.layer{border-bottom:1px solid var(--line)}
+.layer:last-child{border-bottom:none}
+.ltoggle{width:100%;display:flex;align-items:center;gap:11px;padding:13px 18px;text-align:left}
+.ltoggle:hover{background:var(--raised)}
+.ltag{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.06em;
+  padding:3px 8px;border-radius:5px;background:var(--accent-soft);color:var(--accent-ink);
+  white-space:nowrap}
+.ltag.warn{background:var(--warn-soft);color:var(--warn)}
+.ltag.flag{background:var(--flag-soft);color:var(--flag)}
+.lname{font-size:13.5px;color:var(--ink);font-weight:500}
+.ltime{font-family:var(--mono);font-size:11px;color:var(--faint);margin-left:auto;
+  white-space:nowrap;font-variant-numeric:tabular-nums}
+.lbody{padding:2px 18px 18px;font-size:15.5px;line-height:1.85;color:var(--body)}
+.lbody p{margin:0 0 12px} .lbody p:last-child{margin-bottom:0}
+.lbody strong{color:var(--ink);font-weight:700}
+.lbody.quote{border-left:3px solid var(--accent);padding-left:15px;margin:0 18px 18px;
+  background:var(--accent-soft);border-radius:0 6px 6px 0;padding-top:13px;padding-bottom:13px;
+  padding-right:15px}
+.lbody.flagbox{border-left:3px solid var(--flag);background:var(--flag-soft);
+  padding-left:15px;margin:0 18px 18px;border-radius:0 6px 6px 0;
+  padding-top:13px;padding-bottom:13px;padding-right:15px}
+.lbody.warnbox{border-left:3px solid var(--warn);background:var(--warn-soft);
+  padding-left:15px;margin:0 18px 18px;border-radius:0 6px 6px 0;
+  padding-top:13px;padding-bottom:13px;padding-right:15px}
+.hidden{display:none}
+
+/* ---------- 底部控制条 ---------- */
+.dock{position:fixed;left:0;right:0;bottom:0;background:var(--surface);
+  border-top:1px solid var(--line);padding:9px 16px calc(9px + env(safe-area-inset-bottom));
+  z-index:20;box-shadow:0 -4px 16px -8px rgba(0,0,0,.2)}
+.dockin{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:8px}
+.statusrow{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;padding-bottom:1px}
+.statusrow::-webkit-scrollbar{display:none}
+.st{font-family:var(--mono);font-size:11px;padding:6px 11px;border-radius:999px;
+  border:1px solid var(--line);color:var(--muted);white-space:nowrap;flex-shrink:0}
+.st[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--ground);
+  font-weight:500}
+.navrow{display:flex;gap:8px;align-items:center}
+.nav{flex:0 0 auto;padding:11px 17px;border-radius:8px;border:1px solid var(--line-strong);
+  background:var(--raised);font-family:var(--mono);font-size:13px;font-weight:500}
+.nav:hover{border-color:var(--accent);color:var(--accent)}
+.counter{flex:1;text-align:center;font-family:var(--mono);font-size:12px;color:var(--faint);
+  font-variant-numeric:tabular-nums}
+
+/* ---------- 测评 ---------- */
+textarea{width:100%;min-height:150px;padding:14px;border-radius:8px;border:1px solid var(--line);
+  background:var(--raised);color:var(--body);font-family:var(--sans);font-size:15px;
+  line-height:1.75;resize:vertical}
+textarea:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:var(--accent)}
+.gradehead{display:flex;align-items:center;gap:11px;padding:14px 18px;flex-wrap:wrap;
+  border-bottom:1px solid var(--line)}
+.verdict{font-family:var(--mono);font-size:13px;font-weight:700;padding:5px 13px;
+  border-radius:6px;letter-spacing:.04em}
+.v-优秀{background:var(--ok-soft);color:var(--ok)}
+.v-及格{background:var(--accent-soft);color:var(--accent-ink)}
+.v-不及格{background:var(--flag-soft);color:var(--flag)}
+.reach{font-family:var(--mono);font-size:11.5px;color:var(--faint);letter-spacing:.04em}
+.glist{margin:0;padding:0;list-style:none}
+.glist li{padding:7px 0 7px 24px;position:relative;font-size:14.5px;line-height:1.7;
+  border-bottom:1px solid var(--line)}
+.glist li:last-child{border-bottom:none}
+.glist li::before{position:absolute;left:0;top:7px;font-family:var(--mono);font-size:12px;font-weight:700}
+.glist.hit li::before{content:"✓";color:var(--ok)}
+.glist.miss li::before{content:"−";color:var(--warn)}
+.glist.flags li::before{content:"!";color:var(--flag)}
+.gsec{padding:13px 18px;border-bottom:1px solid var(--line)}
+.gsec:last-child{border-bottom:none}
+.gsec h4{margin:0 0 6px;font-family:var(--mono);font-size:10.5px;font-weight:700;
+  letter-spacing:.07em;color:var(--faint);text-transform:uppercase}
+.note{font-family:var(--mono);font-size:11.5px;color:var(--faint);line-height:1.65;padding:11px 18px}
+.note.warnbg{background:var(--warn-soft);color:var(--warn);border-radius:8px;margin:0 0 12px}
+
+/* ---------- 总览 ---------- */
+.tbl{width:100%;border-collapse:collapse;font-size:13.5px}
+.tbl th{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;color:var(--faint);
+  text-align:left;padding:9px 10px;border-bottom:1px solid var(--line-strong);
+  text-transform:uppercase;font-weight:700}
+.tbl td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl tr:hover td{background:var(--raised);cursor:pointer}
+.tbl .m{font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:700;white-space:nowrap}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--line-strong);
+  margin-right:7px;vertical-align:middle}
+.scrollx{overflow-x:auto}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:1px;
+  background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;
+  margin-bottom:16px}
+.stat{background:var(--surface);padding:13px 14px}
+.stat .n{font-family:var(--mono);font-size:24px;font-weight:700;color:var(--ink);
+  font-variant-numeric:tabular-nums;line-height:1.2}
+.stat .l{font-family:var(--mono);font-size:10.5px;color:var(--faint);letter-spacing:.05em;margin-top:3px}
+.kbd{font-family:var(--mono);font-size:10px;border:1px solid var(--line-strong);border-radius:4px;
+  padding:1px 5px;color:var(--faint);background:var(--raised)}
+@media(max-width:640px){
+  .qtitle{font-size:18px}
+  .gaugebar{grid-template-columns:repeat(30,1fr);grid-auto-rows:11px;height:auto;gap:2px}
+  .lbody{font-size:15px}
+  .deskonly{display:none}
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="brandline">
+      <h1>Agent 面试演练台</h1>
+      <span class="sub">60 题 · L0→L3 分层 · 出声计时</span>
+    </div>
+    <div class="gauge">
+      <div class="gaugebar" id="gauge"></div>
+      <div class="gaugekey" id="gaugekey"></div>
+    </div>
+  </header>
+
+  <div class="bar">
+    <div class="seg" role="group" aria-label="模式">
+      <button id="m-drill" aria-pressed="true">背题</button>
+      <button id="m-grade" aria-pressed="false">测评</button>
+      <button id="m-list" aria-pressed="false">总览</button>
+    </div>
+    <select id="filter" aria-label="筛选">
+      <option value="all">全部 60 题</option>
+      <option value="star">必背 24 题</option>
+      <option value="todo">未掌握</option>
+      <option value="redo">需重做</option>
+      <option value="A">A · LLM 基本功</option>
+      <option value="B">B · 推理与服务基础设施</option>
+      <option value="C">C · Agent 边界与工具</option>
+      <option value="D">D · 上下文 RAG 与记忆</option>
+      <option value="E">E · 编排多 Agent 与协议</option>
+      <option value="F">F · 评测可观测与排错</option>
+      <option value="G">G · 安全与上线</option>
+    </select>
+    <span class="spacer"></span>
+    <span class="sub deskonly"><span class="kbd">←</span> <span class="kbd">→</span> 翻页 · <span class="kbd">空格</span> 展开 · <span class="kbd">T</span> 计时</span>
+  </div>
+
+  <main id="view"></main>
+</div>
+
+<div class="dock" id="dock">
+  <div class="dockin">
+    <div class="statusrow" id="statusrow"></div>
+    <div class="navrow">
+      <button class="nav" id="prev">← 上一题</button>
+      <span class="counter" id="counter">—</span>
+      <button class="nav" id="next">下一题 →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DECK = /*__DECK_JSON__*/null;
+const QS = DECK.questions;
+const STATUSES = ["未开始","L0","L1","L2弱","L2","已掌握","需重做"];
+const STAR = new Set(["Q03","Q05","Q07","Q09","Q17","Q18","Q19","Q20","Q23","Q24","Q25",
+  "Q26","Q28","Q29","Q30","Q31","Q34","Q37","Q38","Q42","Q44","Q45","Q46","Q50","Q53","Q54","Q60"]);
+
+/* ---------- 状态：db 优先，localStorage 兜底 ---------- */
+let progress = {};        // {Q19:{status,ts,grade}}
+let db = null, sample = null;
+const LS = "agentdeck.progress.v1";
+
+function loadLocal(){ try{ return JSON.parse(localStorage.getItem(LS)||"{}"); }catch{ return {}; } }
+function saveLocal(){ try{ localStorage.setItem(LS, JSON.stringify(progress)); }catch{} }
+
+async function saveProgress(){
+  saveLocal();
+  if(!db) return;
+  try{ await db.doc("progress/state").set({data:progress, updatedAt:new Date().toISOString()}); }
+  catch(e){ /* 同步失败不影响本地使用 */ }
+}
+
+progress = loadLocal();
+
+(async ()=>{
+  if(typeof window.claude?.use !== "function") return;
+  try{
+    db = await window.claude.use("db");
+    if(db){
+      db.doc("progress/state").onSnapshot(snap=>{
+        if(!snap.exists) return;
+        const remote = snap.data()?.data;
+        if(remote && typeof remote === "object"){
+          progress = {...remote};   // 云端为准，跨设备同步
+          saveLocal(); render(); renderGauge();
+        }
+      }, ()=>{});
+    }
+  }catch{}
+  try{ sample = await window.claude.use("sample"); }catch{}
+  render();
+})();
+
+/* ---------- 视图状态 ---------- */
+let mode = "drill";
+let filter = "all";
+let idx = 0;
+// 默认展开「骨架」：它是记忆脚手架不是完整答案，既让首屏有内容，
+// 又不剧透「先不看稿子说一遍」的自测环节。
+const DEFAULT_OPEN = {skeleton:true};
+let open = {...DEFAULT_OPEN};   // 本题展开了哪些层
+let timer = {t:0, on:false, h:null};
+
+function list(){
+  if(filter==="all") return QS;
+  if(filter==="star") return QS.filter(q=>STAR.has(q.id));
+  if(filter==="todo") return QS.filter(q=>(progress[q.id]?.status||"未开始")!=="已掌握");
+  if(filter==="redo") return QS.filter(q=>progress[q.id]?.status==="需重做");
+  return QS.filter(q=>q.module===filter);
+}
+function cur(){ const L=list(); return L[Math.min(idx,L.length-1)]; }
+function st(id){ return progress[id]?.status || "未开始"; }
+
+/* ---------- 文本渲染（把 markdown 强调转成 HTML） ---------- */
+function esc(s){ return String(s??"").replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function fmt(s){
+  return esc(s).split(/\n{2,}/).map(p=>{
+    let h = p.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>")
+             .replace(/「(.+?)」/g,"「<strong>$1</strong>」")
+             .replace(/\n/g,"<br>");
+    return `<p>${h}</p>`;
+  }).join("");
+}
+
+/* ---------- 计时器 ---------- */
+function tick(){
+  timer.t++;
+  const el = document.getElementById("clock");
+  if(el){ el.textContent = String(timer.t).padStart(2,"0")+"s";
+    el.className = "clock"+(timer.t>40?" bad":timer.t>30?" over":""); }
+}
+function toggleTimer(){
+  if(timer.on){ clearInterval(timer.h); timer.on=false; }
+  else { timer.t=0; timer.on=true; timer.h=setInterval(tick,1000); tick(); }
+  render();
+}
+function stopTimer(){ if(timer.on){clearInterval(timer.h); timer.on=false;} timer.t=0; }
+
+/* ---------- 仪表条 ---------- */
+function renderGauge(){
+  const g = document.getElementById("gauge");
+  g.innerHTML = QS.map((q,i)=>{
+    const s = st(q.id);
+    return `<button class="tick${q===cur()?" cur":""}" data-s="${s}" data-i="${i}"
+      title="${q.id} ${esc(q.title)} · ${s}" aria-label="${q.id} ${s}"></button>`;
+  }).join("");
+  const c = {};
+  QS.forEach(q=>{ const s=st(q.id); c[s]=(c[s]||0)+1; });
+  document.getElementById("gaugekey").innerHTML =
+    STATUSES.filter(s=>c[s]).map(s=>`${s} <b>${c[s]}</b>`).join(" · ")
+    + ` · 共 <b>${QS.length}</b>`;
+}
+
+/* ---------- 背题 ---------- */
+function layerHTML(q){
+  const L = [];
+  const add = (key,tag,name,time,cls,box)=>{
+    if(!q[key]) return;
+    const isOpen = !!open[key];
+    L.push(`<div class="layer">
+      <button class="ltoggle" data-layer="${key}" aria-expanded="${isOpen}">
+        <span class="ltag ${cls||""}">${tag}</span>
+        <span class="lname">${name}</span>
+        <span class="ltime">${isOpen?"收起":time}</span>
+      </button>
+      <div class="lbody ${box||""} ${isOpen?"":"hidden"}">${fmt(q[key])}</div>
+    </div>`);
+  };
+  add("l0","L0","逐字背 · 是什么 + 边界","30 秒","","quote");
+  add("skeleton","🦴","骨架 · 忘词时靠它救场","—","");
+  add("l1","L1","被追问时补 · 为什么这么选","+90 秒","");
+  add("l2","L2","会怎么坏 · 推演版","+2 分钟","");
+  add("slot","📝","素材槽 · 填你自己的数字","—","warn","warnbox");
+  add("fallback","🔻","降级话术 · 没素材时这么说","—","warn","warnbox");
+  add("l3","L3","怎么验证 · 线上怎么发现","+2 分钟","");
+  add("avoid","⚠️","别说 · 会被扣分的表述","—","flag","flagbox");
+  return L.join("");
+}
+
+function drillHTML(q){
+  const s = st(q.id);
+  return `<div class="card">
+    <div class="qhead">
+      <div class="qmeta">
+        <span class="qid">${q.id}</span>
+        <span class="chip">${q.module} · ${esc(q.moduleName)}</span>
+        ${STAR.has(q.id)?'<span class="chip star">必背</span>':""}
+        ${progress[q.id]?.ts?`<span>上次 ${progress[q.id].ts}</span>`:""}
+      </div>
+      <h2 class="qtitle">${esc(q.title)}</h2>
+    </div>
+    <div class="timer">
+      <span class="clock${timer.t>40?" bad":timer.t>30?" over":""}" id="clock">${String(timer.t).padStart(2,"0")}s</span>
+      <button class="btn ${timer.on?"":"solid"}" id="timerbtn">${timer.on?"停止":"出声计时"}</button>
+      <span class="timerhint">先不看稿子说一遍。<br>L0 超 40 秒 = 没提炼干净。</span>
+    </div>
+    <div class="layers">${layerHTML(q)}</div>
+  </div>`;
+}
+
+/* ---------- 测评 ---------- */
+let grading = false, gradeCtl = null;
+function gradeHTML(q){
+  const saved = progress[q.id]?.grade;
+  const draft = progress[q.id]?.draft || "";
+  return `<div class="card">
+    <div class="qhead">
+      <div class="qmeta">
+        <span class="qid">${q.id}</span>
+        <span class="chip">${q.module} · ${esc(q.moduleName)}</span>
+        ${STAR.has(q.id)?'<span class="chip star">必背</span>':""}
+      </div>
+      <h2 class="qtitle">${esc(q.title)}</h2>
+    </div>
+    <div class="gsec">
+      <h4>把你的回答录进来</h4>
+      ${sample===null?'<div class="note warnbg">这个视图里评分不可用。你仍然可以写下答案存草稿，之后在能用的设备上评分。</div>':""}
+      <textarea id="answer" placeholder="按你实际会说的口语写，不要写成书面语。&#10;想练 L0 就只写 30 秒的那一段。">${esc(draft)}</textarea>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <button class="btn solid" id="gradebtn" ${sample===null?"disabled":""}>${grading?"评分中…":"提交评分"}</button>
+        ${grading?'<button class="btn" id="stopgrade">停止</button>':""}
+        <button class="btn" id="cleargrade">清空</button>
+      </div>
+    </div>
+    <div id="gradeout">${saved?verdictHTML(saved):""}</div>
+  </div>`;
+}
+
+function verdictHTML(g){
+  const li = (arr,cls)=> (arr&&arr.length)
+    ? `<ul class="glist ${cls}">${arr.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>` : "";
+  const fs = g.firstSentence||"";
+  const fsBad = /定义/.test(fs);
+  return `<div class="gradehead">
+      <span class="verdict v-${esc(g.verdict||"及格")}">${esc(g.verdict||"—")}</span>
+      <span class="reach">达到 ${esc(g.reachedLayer||"—")}</span>
+      ${fs?`<span class="reach" style="color:${fsBad?"var(--flag)":"var(--ok)"}">第一句：${esc(fs)}</span>`:""}
+    </div>
+    ${g.hit?.length?`<div class="gsec"><h4>命中的采分点</h4>${li(g.hit,"hit")}</div>`:""}
+    ${g.missed?.length?`<div class="gsec"><h4>漏掉的采分点</h4>${li(g.missed,"miss")}</div>`:""}
+    ${g.redFlags?.length?`<div class="gsec"><h4>触发的红旗</h4>${li(g.redFlags,"flags")}</div>`:""}
+    ${g.advice?`<div class="gsec"><h4>下一步怎么改</h4><div class="lbody" style="padding:0">${fmt(g.advice)}</div></div>`:""}
+    ${g.rewrite?`<div class="gsec"><h4>开头两句可以这么说</h4><div class="lbody quote" style="margin:0">${fmt(g.rewrite)}</div></div>`:""}`;
+}
+
+function gradePrompt(q, answer){
+  return `你是一位资深的 AI Agent 岗面试官，正在评判候选人的口头回答。
+
+【题目】${q.id} · ${q.title}
+
+【判卷标准 —— 这是唯一依据，不要用你自己的标准】
+${q.rubric}
+
+【候选人的口头回答】
+${answer}
+
+【评判规则】
+1. 这是**口头回答**，不要因为口语化、不完整的句子扣分。只看内容。
+2. 分层判定 reachedLayer：
+   - L0 = 说清了「是什么 + 边界」
+   - L1 = 还说出了选型理由和**放弃了什么**
+   - L2 = 还给出了失败模式，且**有自己踩过的、带具体数字的经历**
+   - L3 = 还说出了怎么验证、线上看什么指标、以及这个指标怎么会骗人
+   只有真的达到了才给，不要抬高。没有具体数字就不能算 L2。
+3. verdict 三选一：不及格 / 及格 / 优秀。
+   - 不及格：说不出核心区分点，或触发了判卷标准里的「红旗」
+   - 及格：核心采分点基本命中
+   - 优秀：命中且说出了取舍、代价或反例
+4. firstSentence：判断回答的第一句是「定义句式」还是「取舍或场景」。
+   定义句式（"X 是一种…"）扣分，取舍或场景开头加分。只填这两个词之一。
+5. missed 只列判卷标准里明确要求、而回答确实没提到的点。不要发挥。
+6. advice 给一到三条**具体**建议，每条都指向一个可以马上改的动作。
+7. rewrite 用候选人自己的语气，改写出更好的开头两句，不超过 80 字。
+
+只输出 JSON，不要任何其他文字：
+{"verdict":"不及格|及格|优秀","reachedLayer":"L0|L1|L2|L3","firstSentence":"定义句式|取舍或场景","hit":["…"],"missed":["…"],"redFlags":["…"],"advice":"…","rewrite":"…"}`;
+}
+
+async function doGrade(){
+  const q = cur();
+  const ta = document.getElementById("answer");
+  const answer = (ta?.value||"").trim();
+  if(!answer){ ta?.focus(); return; }
+  progress[q.id] = {...(progress[q.id]||{}), draft:answer};
+  saveLocal();
+  if(!sample) return;
+
+  grading = true; gradeCtl = new AbortController();
+  render();
+  const out = document.getElementById("gradeout");
+  if(out) out.innerHTML = `<div class="note">正在评分…　模型要先想一会儿，通常 10–40 秒。</div>`;
+
+  try{
+    const g = await sample.json(gradePrompt(q, answer),
+      {modelTier:"default", signal:gradeCtl.signal, cache:false});
+    progress[q.id] = {...(progress[q.id]||{}), grade:g, ts:new Date().toISOString().slice(0,10)};
+    // 评级自动回写状态，但不覆盖你手动标的「需重做」
+    if(st(q.id)!=="需重做"){
+      const map = {L0:"L0",L1:"L1",L2:"L2",L3:"已掌握"};
+      const lvl = map[g.reachedLayer];
+      if(lvl && g.verdict!=="不及格") progress[q.id].status = lvl;
+      if(g.verdict==="不及格") progress[q.id].status = "需重做";
+    }
+    await saveProgress();
+  }catch(e){
+    const msg = e?.code==="not_granted" ? "你还没允许这个页面调用 Claude。刷新后在弹窗里选允许。"
+      : e?.code==="rate_limited" ? "调用太频繁了，等一会儿再试。"
+      : e?.code==="cancelled" ? "已停止。"
+      : `评分失败（${esc(e?.code||"unknown")}）。答案已存草稿，可以稍后重试。`;
+    grading = false; render();
+    const o = document.getElementById("gradeout");
+    if(o) o.innerHTML = `<div class="note warnbg">${msg}</div>`;
+    return;
+  }
+  grading = false;
+  render(); renderGauge();
+}
+
+/* ---------- 总览 ---------- */
+function listHTML(){
+  const L = list();
+  const c = {}; QS.forEach(q=>{const s=st(q.id); c[s]=(c[s]||0)+1;});
+  const done = c["已掌握"]||0, redo = c["需重做"]||0;
+  const started = QS.length - (c["未开始"]||0);
+  return `<div class="stats">
+      <div class="stat"><div class="n">${done}</div><div class="l">已掌握</div></div>
+      <div class="stat"><div class="n">${started}</div><div class="l">已开始</div></div>
+      <div class="stat"><div class="n">${redo}</div><div class="l">需重做</div></div>
+      <div class="stat"><div class="n">${QS.length-started}</div><div class="l">未开始</div></div>
+      <div class="stat"><div class="n">${[...STAR].filter(id=>st(id)==="已掌握").length}/24</div><div class="l">必背进度</div></div>
+    </div>
+    <div class="card scrollx"><table class="tbl">
+      <thead><tr><th>题号</th><th>题目</th><th>状态</th><th>上次</th></tr></thead>
+      <tbody>${L.map((q,i)=>`<tr data-i="${i}">
+        <td class="m">${q.id}${STAR.has(q.id)?" ★":""}</td>
+        <td>${esc(q.title)}</td>
+        <td><span class="dot" style="background:${
+          st(q.id)==="已掌握"?"var(--ok)":st(q.id)==="需重做"?"var(--flag)":
+          st(q.id)==="未开始"?"var(--line-strong)":"var(--accent)"}"></span>${st(q.id)}</td>
+        <td class="m" style="color:var(--faint)">${progress[q.id]?.ts||"—"}</td>
+      </tr>`).join("")}</tbody>
+    </table></div>`;
+}
+
+/* ---------- 渲染 ---------- */
+function render(){
+  const L = list();
+  if(!L.length){
+    document.getElementById("view").innerHTML =
+      `<div class="card"><div class="note">这个筛选下没有题目。换一个筛选试试。</div></div>`;
+    document.getElementById("counter").textContent = "0 / 0";
+    return;
+  }
+  if(idx>=L.length) idx = L.length-1;
+  const q = L[idx];
+  const v = document.getElementById("view");
+  v.innerHTML = mode==="drill" ? drillHTML(q) : mode==="grade" ? gradeHTML(q) : listHTML();
+
+  document.getElementById("counter").textContent =
+    mode==="list" ? `${L.length} 题` : `${idx+1} / ${L.length}`;
+  document.getElementById("dock").style.display = mode==="list" ? "none" : "";
+  document.getElementById("statusrow").innerHTML = STATUSES.map(s=>
+    `<button class="st" data-st="${s}" aria-pressed="${st(q.id)===s}">${s}</button>`).join("");
+  renderGauge();
+  wire();
+}
+
+function wire(){
+  const q = cur();
+  document.getElementById("timerbtn")?.addEventListener("click", toggleTimer);
+  document.querySelectorAll(".ltoggle").forEach(b=>b.addEventListener("click",()=>{
+    const k=b.dataset.layer; open[k]=!open[k]; render();
+  }));
+  document.getElementById("gradebtn")?.addEventListener("click", doGrade);
+  document.getElementById("stopgrade")?.addEventListener("click", ()=>gradeCtl?.abort());
+  document.getElementById("cleargrade")?.addEventListener("click", async ()=>{
+    progress[q.id] = {...(progress[q.id]||{}), draft:"", grade:null};
+    await saveProgress(); render();
+  });
+  document.getElementById("answer")?.addEventListener("input", e=>{
+    progress[q.id] = {...(progress[q.id]||{}), draft:e.target.value}; saveLocal();
+  });
+  document.querySelectorAll(".st").forEach(b=>b.addEventListener("click", async ()=>{
+    progress[q.id] = {...(progress[q.id]||{}), status:b.dataset.st,
+      ts:new Date().toISOString().slice(0,10)};
+    await saveProgress(); render();
+  }));
+  document.querySelectorAll(".tick").forEach(b=>b.addEventListener("click",()=>{
+    const target = QS[+b.dataset.i];
+    const L = list(); const i = L.indexOf(target);
+    if(i<0){ filter="all"; document.getElementById("filter").value="all";
+      idx = QS.indexOf(target); } else idx = i;
+    open={...DEFAULT_OPEN}; stopTimer(); if(mode==="list") setMode("drill"); else render();
+  }));
+  document.querySelectorAll(".tbl tbody tr").forEach(tr=>tr.addEventListener("click",()=>{
+    idx = +tr.dataset.i; open={...DEFAULT_OPEN}; setMode("drill");
+  }));
+}
+
+function go(d){
+  const L = list();
+  idx = (idx + d + L.length) % L.length;
+  open = {...DEFAULT_OPEN}; stopTimer(); render();
+}
+function setMode(m){
+  mode = m; open={...DEFAULT_OPEN}; stopTimer();
+  ["drill","grade","list"].forEach(x=>
+    document.getElementById("m-"+x).setAttribute("aria-pressed", String(x===m)));
+  render();
+}
+
+document.getElementById("prev").addEventListener("click",()=>go(-1));
+document.getElementById("next").addEventListener("click",()=>go(1));
+["drill","grade","list"].forEach(m=>
+  document.getElementById("m-"+m).addEventListener("click",()=>setMode(m)));
+document.getElementById("filter").addEventListener("change",e=>{
+  filter = e.target.value; idx=0; open={...DEFAULT_OPEN}; stopTimer(); render();
+});
+addEventListener("keydown", e=>{
+  if(e.target.tagName==="TEXTAREA"||e.target.tagName==="SELECT") return;
+  if(e.key==="ArrowLeft") go(-1);
+  else if(e.key==="ArrowRight") go(1);
+  else if(e.key===" "){ e.preventDefault();
+    const q=cur();
+    const order=["l0","skeleton","l1","l2","slot","fallback","l3","avoid"].filter(k=>q[k]);
+    const nextK = order.find(k=>!open[k]);
+    if(nextK){ open[nextK]=true; render(); }
+  }
+  else if(e.key.toLowerCase()==="t") toggleTimer();
+});
+
+// 触摸滑动翻页
+let tx=0, ty=0;
+addEventListener("touchstart",e=>{tx=e.touches[0].clientX; ty=e.touches[0].clientY;},{passive:true});
+addEventListener("touchend",e=>{
+  if(mode==="list") return;
+  const dx=e.changedTouches[0].clientX-tx, dy=e.changedTouches[0].clientY-ty;
+  if(Math.abs(dx)>70 && Math.abs(dx)>Math.abs(dy)*2) go(dx<0?1:-1);
+},{passive:true});
+
+render();
+</script>

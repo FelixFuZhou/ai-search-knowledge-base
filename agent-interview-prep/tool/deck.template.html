@@ -373,6 +373,7 @@ function layerHTML(q){
   };
   add("l0","L0","逐字背 · 是什么 + 边界","30 秒","","quote");
   add("skeleton","🦴","骨架 · 忘词时靠它救场","—","");
+  add("terms","📖","术语 · 你必须能拆开讲","—","","quote");
   add("l1","L1","被追问时补 · 为什么这么选","+90 秒","");
   add("l2","L2","会怎么坏 · 推演版","+2 分钟","");
   add("slot","📝","素材槽 · 填你自己的数字","—","warn","warnbox");
@@ -627,7 +628,7 @@ addEventListener("keydown", e=>{
   else if(e.key==="ArrowRight") go(1);
   else if(e.key===" "){ e.preventDefault();
     const q=cur();
-    const order=["l0","skeleton","l1","l2","slot","fallback","l3","avoid"].filter(k=>q[k]);
+    const order=["l0","skeleton","terms","l1","l2","slot","fallback","l3","avoid"].filter(k=>q[k]);
     const nextK = order.find(k=>!open[k]);
     if(nextK){ open[nextK]=true; render(); }
   }

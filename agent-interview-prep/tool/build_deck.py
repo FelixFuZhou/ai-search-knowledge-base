@@ -36,6 +36,8 @@ def classify(marker: str) -> str | None:
         return "l0"
     if "骨架" in m:
         return "skeleton"
+    if "📖" in m or "术语" in m or "拆开讲" in m:
+        return "terms"
     if "别说" in m:
         return "avoid"
     if "素材槽" in m:
@@ -74,8 +76,9 @@ def split_blocks(body: str) -> dict[str, str]:
             flush()
             kind = classify(m.group(1))
             if kind is None:
-                # 不是块标记（比如正文里的加粗），当普通内容处理
-                buf.append(line)
+                # 不是块标记（正文里的加粗），当普通内容处理。
+                # 注意：上面已经 flush 过了，这里必须重置 buf，否则内容会被写两次。
+                buf = [line]
                 continue
             current = kind
             trailing = m.group(3).strip()
@@ -154,7 +157,7 @@ def main() -> int:
     # 质检
     print(f"题目数：{len(ordered)}")
     print(f"缺采分点：{missing_rubric or '无'}")
-    for field in ("l0", "skeleton", "l1", "l2", "l3", "avoid", "rubric"):
+    for field in ("l0", "skeleton", "terms", "l1", "l2", "l3", "avoid", "rubric"):
         n = sum(1 for q in ordered if q.get(field))
         print(f"  {field:9s} {n}/{len(ordered)}")
     empty_l0 = [q["id"] for q in ordered if not q.get("l0")]
